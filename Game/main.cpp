@@ -23,6 +23,14 @@ public:
     {
         return _RectangleShape;
     }
+    void Move(Vector2f _Move)
+    {
+        _RectangleShape.move(_Move);
+    }
+    void SetPositionObject(Vector2f _Position)
+    {
+        _RectangleShape.setPosition(_Position);
+    }
 };
 
 //Klasa Bohatera
@@ -30,21 +38,31 @@ class Player : public Object
 {
 private:
     Vector2f _Move, _Position;
-    float _MoveSpeed = 150.0;
+    float _MoveSpeed = 150.0, _BuletSpeed = 1000.0;
 public:
     //Konstruktor Bohatera który pobiera właściwości konstruktora Object
     Player(String _LoadFromFile, Vector2f _Size, Vector2f _Position) :Object(_LoadFromFile, _Size, _Position)
-    {}
+    {
+        Object::_RectangleShape.setOrigin(Object::_RectangleShape.getSize() / 2.f);
+    }
     //Funkcja porusznia się gracza
     void Move(float time)
     {
+        _Position = Object::_RectangleShape.getPosition();
         if (Keyboard::isKeyPressed(Keyboard::W)) Object::_RectangleShape.move(0, -_MoveSpeed * time);
-        if (Keyboard::isKeyPressed(Keyboard::A)) Object::_RectangleShape.move(-_MoveSpeed * time, 0);
+        if (Keyboard::isKeyPressed(Keyboard::A))
+        {
+            Object::_RectangleShape.move(-_MoveSpeed * time, 0);
+            Object::_RectangleShape.setScale(-1.f, 1.f);
+        }
         if (Keyboard::isKeyPressed(Keyboard::S)) Object::_RectangleShape.move(0, _MoveSpeed * time);
-        if (Keyboard::isKeyPressed(Keyboard::D)) Object::_RectangleShape.move(_MoveSpeed * time, 0);
+        if (Keyboard::isKeyPressed(Keyboard::D))
+        {
+            Object::_RectangleShape.move(_MoveSpeed * time, 0);
+            Object::_RectangleShape.setScale(1.f, 1.f);
+        }
 
         //Granicy pokoju dla bohatera
-        _Position = Object::_RectangleShape.getPosition();
         if (_Position.x > 1096) Object::_RectangleShape.setPosition(1096, _Position.y);
         if (_Position.x < 96) Object::_RectangleShape.setPosition(96, _Position.y);
         if (_Position.y > 531) Object::_RectangleShape.setPosition(_Position.x, 531);
@@ -57,9 +75,12 @@ public:
     }
 
     //Funkcja strzału
-    void Shot(float time, Vector2f _MousePosition)
+    void Shot(float time, Vector2f _MousePosition, Object* Bullet)
     {
-    
+        Vector2f _Move = Vector2f(_MousePosition.x - _Position.x, _MousePosition.y - _Position.y);
+        float distance = sqrt(pow(_MousePosition.x - _Position.x,2) + pow(_MousePosition.y - _Position.y, 2));
+        _Move /= distance;
+        Bullet->Move(_Move*_BuletSpeed*time);        
     }
 };
 
@@ -77,8 +98,12 @@ int main()
     Object TopWall("Textures/Room/top_wall.png", Vector2f(1280, 96), Vector2f(0, 0));
     Object BottomWall("Textures/Room/bottom_wall.png", Vector2f(1280, 96), Vector2f(0, 624));
     Player Hero("Textures/Hero/Hero.png", Vector2f(88, 93), Vector2f(640-44, 360-46));
+    Object Bullet("Textures/Hero/Bullet.png", Vector2f(32, 32), Vector2f(Hero.GetObject().getPosition()));
 
 
+    bool _IsShot=false;
+    Mouse _Mouse;
+    Vector2f _MousePosition;
 
     while (window.isOpen())
     {
@@ -99,8 +124,18 @@ int main()
 
         if (Mouse::isButtonPressed(Mouse::Left))
         {
-            Mouse _Mouse;
-            Hero.Shot(time, window.mapPixelToCoords(_Mouse.getPosition(window)));
+            Bullet.SetPositionObject(Hero.GetObject().getPosition());
+            _IsShot = true;
+            _MousePosition = window.mapPixelToCoords(_Mouse.getPosition(window));
+        }
+
+        if (_IsShot)
+        {
+            Hero.Shot(time, _MousePosition, &Bullet);
+            if (Bullet.GetObject().getPosition().x >  1184-(32/2)|| Bullet.GetObject().getPosition().x < 96-(32/2) || Bullet.GetObject().getPosition().y > 624-(32/2) || Bullet.GetObject().getPosition().y < 96-(32/2))
+            {
+                _IsShot = false;
+            }
         }
 
         //Wyświetlanie wszystkich obiektów w oknie gry
@@ -111,6 +146,7 @@ int main()
         window.draw(TopWall.GetObject());
         window.draw(BottomWall.GetObject());
         window.draw(Hero.GetObject());
+        window.draw(Bullet.GetObject());
         window.display();
     }
 
