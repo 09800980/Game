@@ -129,14 +129,6 @@ int main()
             _MousePosition = window.mapPixelToCoords(_Mouse.getPosition(window));
         }
 
-        if (_IsShot)
-        {
-            Hero.Shot(time, _MousePosition, &Bullet);
-            if (Bullet.GetObject().getPosition().x >  1184-(32/2)|| Bullet.GetObject().getPosition().x < 96-(32/2) || Bullet.GetObject().getPosition().y > 624-(32/2) || Bullet.GetObject().getPosition().y < 96-(32/2))
-            {
-                _IsShot = false;
-            }
-        }
 
         //Wyświetlanie wszystkich obiektów w oknie gry
         window.clear();
@@ -146,7 +138,16 @@ int main()
         window.draw(TopWall.GetObject());
         window.draw(BottomWall.GetObject());
         window.draw(Hero.GetObject());
-        window.draw(Bullet.GetObject());
+
+        if (_IsShot)
+        {
+            Hero.Shot(time, _MousePosition, &Bullet);
+            if (Bullet.GetObject().getPosition().x > 1184 - (32 / 2) || Bullet.GetObject().getPosition().x < 96 - (32 / 2) || Bullet.GetObject().getPosition().y > 624 - (32 / 2) || Bullet.GetObject().getPosition().y < 96 - (32 / 2))
+            {
+                _IsShot = false;
+            }
+            window.draw(Bullet.GetObject());
+        }
         window.display();
     }
 
