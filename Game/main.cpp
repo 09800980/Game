@@ -56,10 +56,11 @@ public:
         if (_Position.x < 96 && _Position.y < 36) Object::_RectangleShape.setPosition(96, 36);
     }
 
-    //void Shot(float time, Vector2f _MousePosition)
-    //{
-
-    //}
+    //Funkcja strzału
+    void Shot(float time, Vector2f _MousePosition)
+    {
+    
+    }
 };
 
 int main()
@@ -96,11 +97,11 @@ int main()
         //Wywołanie funkcji poruszania gracza
         Hero.Move(time);
 
-        //if (Mouse::isButtonPressed(Mouse::Left))
-        //{
-        //    Mouse _Mouse;
-        //    Hero.Shot(time, window.mapPixelToCoords(_Mouse.getPosition(window)));
-        //}
+        if (Mouse::isButtonPressed(Mouse::Left))
+        {
+            Mouse _Mouse;
+            Hero.Shot(time, window.mapPixelToCoords(_Mouse.getPosition(window)));
+        }
 
         //Wyświetlanie wszystkich obiektów w oknie gry
         window.clear();
