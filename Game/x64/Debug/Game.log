@@ -1,3 +1,0 @@
-﻿  main.cpp
-C:\Users\shvab\Documents\Game\Game\main.cpp(81,24): warning C4244: инициализация: преобразование "double" в "float", возможна потеря данных
-  Game.vcxproj -> C:\Users\shvab\Documents\Game\Game\x64\Debug\Game.exe
