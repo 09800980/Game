@@ -37,18 +37,6 @@ public:
     {
         return _Sprite;
     }
-
-    //Przesunięcie objektu
-    void Move(Vector2f _Move)
-    {
-        _Sprite.move(_Move);
-    }
-
-    //Ustawienie pozycji objekta
-    void SetPositionGameSprite(Vector2f _Position)
-    {
-        _Sprite.setPosition(_Position);
-    }
 };
 
 //Klasa Strału
@@ -60,8 +48,11 @@ private:
     Vector2f _Direction;
 public:
     //Konstruktor który wylicza kierunek strzału
-    Bullet(String _LoadFromFile, Vector2f _Position, Vector2f _MousePosition) :GameSprite(_LoadFromFile, _Position)
+    Bullet(String _LoadFromFile) :GameSprite(_LoadFromFile, _Position = Vector2f(0,0))
+    {}
+    void SetDirection(Vector2f _Position, Vector2f _MousePosition)
     {
+        _Sprite.setPosition(_Position);
         _Direction = Vector2f(_MousePosition - _Position);
         float _Distance = static_cast<float>(sqrt(pow(_MousePosition.x - _Position.x, 2) + pow(_MousePosition.y - _Position.y, 2)));
         _Direction /= _Distance;
@@ -86,7 +77,7 @@ public:
     //Funkcja porusznia się gracza
     void Move()
     {
-        _Position = GameSprite::_Sprite.getPosition();
+        _Position = _Sprite.getPosition();
         if (Keyboard::isKeyPressed(Keyboard::W) && _Position.y > WallSize) GameSprite::_Sprite.move(0, -_MoveSpeed * _time);
         if (Keyboard::isKeyPressed(Keyboard::A) && _Position.x > WallSize + _Width / 2)
         {
@@ -115,6 +106,7 @@ int main()
     GameSprite TopWall("Textures/Room/top_wall.png", Vector2f(ScreenWidth / 2, WallSize / 2));
     GameSprite BottomWall("Textures/Room/bottom_wall.png", Vector2f(ScreenWidth / 2, ScreenHeight - WallSize / 2));
     Player Hero("Textures/Hero/Hero.png", Vector2f(ScreenWidth / 2, ScreenHeight / 2));
+    Bullet NewBullet = Bullet("Textures/Hero/Bullet.png");
 
     vector<Bullet> Bullets;
 
@@ -136,7 +128,7 @@ int main()
             {
                 if (event.mouseButton.button == Mouse::Left)
                 {
-                    Bullet NewBullet = Bullet("Textures/Hero/Bullet.png", Hero.GetGameSprite().getPosition(), window.mapPixelToCoords(_Mouse.getPosition(window)));
+                    NewBullet.SetDirection(Hero.GetGameSprite().getPosition(), window.mapPixelToCoords(_Mouse.getPosition(window)));
                     Bullets.emplace_back(NewBullet);
                 }
             }
