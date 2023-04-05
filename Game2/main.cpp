@@ -49,14 +49,13 @@ private:
     const float _BulletSpeed = 1000.0;
     Vector2f _Direction;
 public:
-    //Pusty Konstruktor tylko dla ustawienia tekstur
-    Bullet(String _LoadFromFile, Vector2f _Position) :GameSprite(_LoadFromFile, _Position)
+    //Konstruktor który wylicza kierunek strzału
+    Bullet(String _LoadFromFile) :GameSprite(_LoadFromFile, _Position = Vector2f(0,0))
     {}
-
-    void SetDirection(Vector2f _FPosition, Vector2f _MousePosition)
+    void SetDirection(Vector2f _Position, Vector2f _MousePosition)
     {
-        _Sprite.setPosition(_FPosition);
-        _Direction = Vector2f(_MousePosition - _FPosition);
+        _Sprite.setPosition(_Position);
+        _Direction = Vector2f(_MousePosition - _Position);
         float _Distance = static_cast<float>(sqrt(pow(_MousePosition.x - _Position.x, 2) + pow(_MousePosition.y - _Position.y, 2)));
         _Direction /= _Distance;
     }
@@ -118,7 +117,7 @@ int main()
     GameSprite TopWall("Textures/Room/top_wall.png", Vector2f(ScreenWidth / 2, WallSize / 2));
     GameSprite BottomWall("Textures/Room/bottom_wall.png", Vector2f(ScreenWidth / 2, ScreenHeight - WallSize / 2));
     Player Hero("Textures/Hero/Hero.png", Vector2f(ScreenWidth / 2, ScreenHeight / 2));
-    Bullet NewBullet = Bullet("Textures/Hero/Bullet.png", Hero.GetGameSprite().getPosition());
+    Bullet NewBullet = Bullet("Textures/Hero/Bullet.png");
 
     //Wektor który chroni w sobie wszystkie pociski
     vector<Bullet> Bullets;
@@ -145,7 +144,6 @@ int main()
                 //Warynek sprawdzajacy czy odpuszczony klawisz był LEWYM przyciskiem MYSZY
                 if (event.mouseButton.button == Mouse::Left)
                 {
-                    //Tworzenie nowego picisku i dodanie go dowektora
                     NewBullet.SetDirection(Hero.GetGameSprite().getPosition(), window.mapPixelToCoords(_Mouse.getPosition(window)));
                     Bullets.emplace_back(NewBullet);
                 }
@@ -163,10 +161,9 @@ int main()
         window.draw(TopWall.GetGameSprite());
         window.draw(BottomWall.GetGameSprite());
         window.draw(Hero.GetGameSprite());
-        //Pętla która wyświetla wszystkie pociski
-        for (int i = 0; i < Bullets.size(); i++)
+        for (auto& bullet : Bullets)
         {
-            Bullets[i].Update(window);
+            bullet.Update(window);
         }
         window.display();
     }
