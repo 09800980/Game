@@ -43,14 +43,14 @@ public:
 
 //Klasa Strału
 class Bullet : public GameSprite
-{ 
+{
 private:
     float _Damage = 10;
     const float _BulletSpeed = 1000.0;
     Vector2f _Direction;
 public:
     //Konstruktor który wylicza kierunek strzału
-    Bullet(String _LoadFromFile) :GameSprite(_LoadFromFile, _Position = Vector2f(0,0))
+    Bullet(String _LoadFromFile) :GameSprite(_LoadFromFile, _Position = Vector2f(0, 0))
     {}
     void SetDirection(Vector2f _Position, Vector2f _MousePosition)
     {
@@ -61,7 +61,7 @@ public:
     }
 
     //Metod który przemieszca pocisk
-    void Update(RenderWindow &_window)
+    void Update(RenderWindow& _window)
     {
         _Sprite.move(_Direction * _BulletSpeed * _time);
         _window.draw(_Sprite);
@@ -149,7 +149,7 @@ int main()
                 }
             }
         }
-        
+
         //Wywołanie funkcji poruszania gracza
         Hero.Move();
 

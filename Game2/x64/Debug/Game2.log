@@ -1,2 +1,3 @@
 ﻿  main.cpp
-  Game2.vcxproj -> C:\Users\shvab\Documents\Game\Game2\x64\Debug\Game2.exe
+MSVCRTD.lib(exe_main.obj) : error LNK2019: ссылка на неразрешенный внешний символ main в функции "int __cdecl invoke_main(void)" (?invoke_main@@YAHXZ).
+C:\Users\shvab\Documents\Game\Game2\x64\Debug\Game2.exe : fatal error LNK1120: неразрешенных внешних элементов: 1
