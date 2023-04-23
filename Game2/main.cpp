@@ -8,66 +8,50 @@
 using namespace sf;
 using namespace std;
 
-chrono::high_resolution_clock::time_point previousFrameTime = chrono::high_resolution_clock::now();
-chrono::duration<float> timeSinceLastFrame;
-
 //Rozmiary Okna
 #define ScreenWidth 1280
 #define ScreenHeight 720
 #define WallSize 96
 
 //Globalny obiekt i zmienna Zegara 
-Clock _Clock;
-float _time = 0.0;
-
-//Funkcja wyliczająca kierunek poruszania przez wektor bazowy
-Vector2f CalculateDirection(Vector2f _From, Vector2f _To)
-{
-    Vector2f _Direction = Vector2f(_From - _To);
-    float _Distance = static_cast<float>(sqrt(pow(_To.x - _From.x, 2) + pow(_To.y - _From.y, 2)));
-    _Direction /= _Distance;
-    return _Direction;
-}
+Clock GlobalClock;
+float GlobalTime = 0.0;
 
 //Klasa Bazowa dla obiektów którzy muszą być wyświetlone
 class GameSprite
 {
-protected:
+private:
     Texture _Texture;
+protected:
     Sprite _Sprite;
-    float _Width, _Height;
+    int _PixelWidth, _PixelHeight;
     IntRect _FrameSprite;
 public:
-    //Konstruktor obiektu która tworzy sprajty dla późniejszego odrysowania
-    GameSprite(String _LoadFromFile, Vector2f _Position, Vector2f _Scale = Vector2f(0.f, 0.f))
+    //Konstruktor obiektu który tworzy sprajty dla późniejszego odrysowania
+    GameSprite(String LoadFromFile, Vector2f Position, int PixelWidth = 0, int PixelHeight = 0)
     {
-        if (!_Texture.loadFromFile(_LoadFromFile)) printf("%s Don`t Open\n", _LoadFromFile.toAnsiString().c_str());
+        if (!_Texture.loadFromFile(LoadFromFile)) 
+            printf("%s Don`t Open\n", LoadFromFile.toAnsiString().c_str());
         _Sprite.setTexture(_Texture);
-        if (_Scale != Vector2f(0.f, 0.f))
-            _Sprite.setScale(_Scale);
-        _Width = _Sprite.getLocalBounds().width;
-        _Height = _Sprite.getLocalBounds().height;
+        if (PixelWidth != 0 && PixelHeight != 0)
+        {
+            _PixelHeight = PixelHeight;
+            _PixelWidth = PixelWidth;
+        }
+        else {
+            _PixelWidth = _Sprite.getLocalBounds().width;
+            _PixelHeight = _Sprite.getLocalBounds().height;
+        }
+        _FrameSprite = IntRect(0, 0, _PixelWidth, _PixelHeight);
+        _Sprite.setTextureRect(_FrameSprite);
         _Sprite.setOrigin(_Sprite.getLocalBounds().width / 2, _Sprite.getLocalBounds().height / 2);
-        _Sprite.setPosition(_Position);
+        _Sprite.setPosition(Position);
     }
 
-    GameSprite(String _LoadFromFile, Vector2f _Position, int _width, int _height, Vector2f _Scale = Vector2f(0.f, 0.f))
+    //Metoda Ustawiająca skale objekta
+    void SetScale(Vector2f Scale)
     {
-        if (!_Texture.loadFromFile(_LoadFromFile)) printf("%s Don`t Open\n", _LoadFromFile.toAnsiString().c_str());
-        _Sprite.setTexture(_Texture);
-        if (_Scale != Vector2f(0.f, 0.f))
-            _Sprite.setScale(_Scale);
-
-        this->_FrameSprite.left = 0;
-        this->_FrameSprite.top = 0;
-        this->_FrameSprite.width = 32;
-        this->_FrameSprite.height = 32;
-        _Sprite.setTextureRect(_FrameSprite);
-
-        _Width = _Sprite.getLocalBounds().width;
-        _Height = _Sprite.getLocalBounds().height;
-        _Sprite.setOrigin(_Sprite.getLocalBounds().width / 2, _Sprite.getLocalBounds().height / 2);
-        _Sprite.setPosition(_Position);
+        _Sprite.setScale(Scale);
     }
 
     //Pobieranie Obiektu dla odrysowania go na ekranie
@@ -77,68 +61,82 @@ public:
     }
 };
 
-//Klasa wroga
-class Enemy :public GameSprite
+//Klasa dla Sprajtów z animacją
+class Animated : public GameSprite
 {
 private:
-    const float _MoveSpeed = 100.0;
-    Vector2f _Direction;
-    bool _IsMove;
+    const Time _FrameTime = seconds(0.1f);
+protected:
+    int _top, _left;
+public:
+    //Konstruktor dla dla inicjalizacji zegara
+    Animated(String LoadFromFile, Vector2f Position, int PixelWidth = 0, int PixelHeight = 0) :GameSprite(LoadFromFile, Position, PixelWidth, PixelHeight)
+    {
+        _top = 0;
+        _left = 0;
+        _PixelHeight = PixelHeight;
+        _PixelWidth = PixelWidth;
+    }
+
+    //Metoda zmiany kadrów
+    void Animate(int _top, int _left = -1)
+    {
+        chrono::high_resolution_clock::time_point CurrentFrameTime = chrono::high_resolution_clock::now();
+        static chrono::high_resolution_clock::time_point PreviousFrameTime = chrono::high_resolution_clock::now();
+        chrono::duration<float> TimeSinceLastFrame = CurrentFrameTime - PreviousFrameTime;
+        static int left = 0;
+        static int top = 0;
+        top = _top;
+        if (_left != -1)
+            left = _left;
+        CurrentFrameTime = chrono::high_resolution_clock::now();
+        TimeSinceLastFrame = CurrentFrameTime - PreviousFrameTime;
+        _FrameSprite.left = left * _PixelWidth;
+        _FrameSprite.top = top * _PixelHeight;
+        if (TimeSinceLastFrame.count() >= _FrameTime.asSeconds())
+        {
+            left = (left + 1) % 4;
+            PreviousFrameTime = CurrentFrameTime;
+        }
+
+        _Sprite.setTextureRect(_FrameSprite);
+    }
+};
+
+//Klasa wroga
+class Enemy : public Animated
+{
+private:
+    const float _MoveSpeed = 90.0;
 public:
     //Konstruktor wroga
-    Enemy(String _LoadFromFile, Vector2f _Position, int _width, int _height, Vector2f _Scale) :GameSprite(_LoadFromFile, _Position, _width, _height, _Scale)
+    Enemy(String LoadFromFile, Vector2f Position) :Animated(LoadFromFile, Position, 16, 16)
     {
-        _IsMove = false;
+        SetScale(Vector2f(5.f, 5.f));
     }
     
     //Metoda poruszania wroga
     void Move(Vector2f _Direction)
     {
-        chrono::high_resolution_clock::time_point EnemyCurrentFrameTime = chrono::high_resolution_clock::now();
-        static chrono::high_resolution_clock::time_point EnemyPreviousFrameTime = previousFrameTime;
-        chrono::duration<float> EnemyTimeSinceLastFrame = EnemyCurrentFrameTime - EnemyPreviousFrameTime;
-        const Time _FrameTime = seconds(0.1f);
-        static int _left = 0;
-        static int _top = 0;
-
-        _FrameSprite.left = _left*32;
-        _FrameSprite.top = _top;
-
         if (_Direction.y < 0 && abs(_Direction.y) > abs(_Direction.x))
         {
-            _top = 7 * 32;
+            _top = 3;
         }
         if (_Direction.x < 0 && abs(_Direction.x) > abs(_Direction.y))
         {
-            _top = 5 * 32;
+            _top = 1;
         }
         if (_Direction.y > 0 && abs(_Direction.y) > abs(_Direction.x))
         {
-            _top = 4 * 32;
+            _top = 0;
         }
         if (_Direction.x > 0 && abs(_Direction.x) > abs(_Direction.y))
         {
-            _top = 6 * 32;
+            _top = 2;
         }
-
-        if (EnemyTimeSinceLastFrame.count() >= _FrameTime.asSeconds())
-        {
-            _left = (_left + 1) % 4;
-            EnemyPreviousFrameTime = EnemyCurrentFrameTime;
-        }
-
-        _Sprite.setTextureRect(_FrameSprite);
-
-        this->_Direction = _Direction;
-        printf("%d\n", _left);
-
-        _Sprite.move(this->_Direction*_time*_MoveSpeed);
-    }
-
-    //Metoda aktualizacji wroga
-    void Update(Vector2f _Direction)
-    {
-        Move(_Direction);
+        _Sprite.move(_Direction* GlobalTime* _MoveSpeed);
+        
+        Animate(_top);
     }
 };
 
@@ -151,21 +149,22 @@ private:
     Vector2f _Direction;
 public:
     //Konstruktor który pobiera ustawia kierunek strzału
-    Bullet(String _LoadFromFile, Vector2f _Position, Vector2f _Direction, Vector2f _Scale) :GameSprite(_LoadFromFile, _Position, _Scale)
+    Bullet(String LoadFromFile, Vector2f Position, Vector2f Direction) :GameSprite(LoadFromFile, Position)
     {
-        this->_Direction = _Direction;
+        _Direction = Direction;
+        SetScale(Vector2f(0.8f, 0.8f));
     }
 
     //Metoda która przemieszca pocisk i odrysowuje go na ekranie
-    void Update(RenderWindow& _window)
+    void Update(RenderWindow& window)
     {
-        _Sprite.move(_Direction * _BulletSpeed * _time);
-        _window.draw(_Sprite);
+        _Sprite.move(_Direction * _BulletSpeed * GlobalTime);
+        window.draw(_Sprite);
     }
 };
 
 //Klasa Gracza
-class Player : public GameSprite
+class Player : public Animated
 {
 private:
     Vector2f _Move;
@@ -173,63 +172,86 @@ private:
     bool _IsMove;
 public:
     //Konstruktor Bohatera
-    Player(String _LoadFromFile, Vector2f _Position, int _width, int _height, Vector2f _Scale) :GameSprite(_LoadFromFile, _Position, _width, _height, _Scale)
+    Player(String LoadFromFile, Vector2f Position) :Animated(LoadFromFile, Position, 16, 16)
     {
         _IsMove = false;
+        SetScale(Vector2f(5.f, 5.f));
     }
 
-    //Funkcja porusznia się gracza
+    //Funkcja poruszania się gracza
     void Move()
     {
-        chrono::high_resolution_clock::time_point HeroCurrentFrameTime = chrono::high_resolution_clock::now();
-        static chrono::high_resolution_clock::time_point HeroPreviousFrameTime = previousFrameTime;
-        chrono::duration<float> HeroTimeSinceLastFrame = HeroCurrentFrameTime - HeroPreviousFrameTime;
-        const Time _FrameTime = seconds(0.1f);
-        static int _left = 0;
-        static int _top = 0;
-        if (!_IsMove)
-        {
-            _left = 0;
-        }
-        _FrameSprite.left = _left*32;
-        _FrameSprite.top = _top;
         Vector2f _Position = _Sprite.getPosition();
         if (Keyboard::isKeyPressed(Keyboard::W) || Keyboard::isKeyPressed(Keyboard::A) || Keyboard::isKeyPressed(Keyboard::S) || Keyboard::isKeyPressed(Keyboard::D))
         {
             _IsMove = true;
+            if (Keyboard::isKeyPressed(Keyboard::A) && _Position.x > WallSize + _PixelWidth / 2)
+            {
+                _top = 1;
+                GameSprite::_Sprite.move(-_MoveSpeed * GlobalTime, 0);
+            }
+            if (Keyboard::isKeyPressed(Keyboard::D) && _Position.x < ScreenWidth - WallSize - _PixelWidth / 2)
+            {
+                _top = 2;
+                GameSprite::_Sprite.move(_MoveSpeed * GlobalTime, 0);
+            }
+            if (Keyboard::isKeyPressed(Keyboard::S) && _Position.y < ScreenHeight - WallSize - _PixelWidth / 2)
+            {
+                _top = 0;
+                GameSprite::_Sprite.move(0, _MoveSpeed * GlobalTime);
+            }
             if (Keyboard::isKeyPressed(Keyboard::W) && _Position.y > WallSize)
             {
-                _top = 7 * 32;
-                GameSprite::_Sprite.move(0, -_MoveSpeed * _time);
-            }
-            if (Keyboard::isKeyPressed(Keyboard::A) && _Position.x > WallSize + _Width / 2)
-            {
-                _top = 5 * 32;
-                GameSprite::_Sprite.move(-_MoveSpeed * _time, 0);
-            }
-            if (Keyboard::isKeyPressed(Keyboard::S) && _Position.y < ScreenHeight - WallSize - _Width / 2)
-            {
-                _top = 4 * 32;
-                GameSprite::_Sprite.move(0, _MoveSpeed * _time);
-            }
-            if (Keyboard::isKeyPressed(Keyboard::D) && _Position.x < ScreenWidth - WallSize - _Width / 2)
-            {
-                _top = 6 * 32;
-                GameSprite::_Sprite.move(_MoveSpeed * _time, 0);
+                _top = 3;
+                GameSprite::_Sprite.move(0, -_MoveSpeed * GlobalTime);
             }
         }
-        else _IsMove = false;
-        if (HeroTimeSinceLastFrame.count() >= _FrameTime.asSeconds() && _IsMove)
-        {
-            _left = (_left + 1) % 4;
-            HeroPreviousFrameTime = HeroCurrentFrameTime;
-        }
-        _Sprite.setTextureRect(_FrameSprite);
+        else 
+            _IsMove = false;
+
+        if (!_IsMove)
+            _left = -1;
+        else
+            this->Animate(_top, _left);
     }
 };
 
+//Funkcja która tworzy nowych wrogów
+void SpawnEnemy(list<Enemy>* Enemies, String LoadFromFile, Player Hero)
+{
+    while (true)
+    {
+        int x = rand() % (ScreenWidth - WallSize * 3) + WallSize, y = rand() % (ScreenHeight - WallSize * 3) + WallSize;
+        if (x > Hero.GetGameSprite().getPosition().x + 220 || x < Hero.GetGameSprite().getPosition().x - 220)
+        {
+            if (y > Hero.GetGameSprite().getPosition().y + 220 || y < Hero.GetGameSprite().getPosition().y - 220)
+            {
+                printf("%d\t%d\n", x, y);
+                Enemies->emplace_back(LoadFromFile, Vector2f(x,y));
+                return;
+            }
+            else {
+                y = rand() % (ScreenHeight - WallSize * 2) + WallSize;
+            }
+        }
+        else {
+            x = rand() % (ScreenWidth - WallSize * 2) + WallSize;
+        }
+    }
+}
+
+//Funkcja wyliczająca kierunek poruszania przez wektor bazowy
+Vector2f CalculateDirection(Vector2f To, Vector2f From)
+{
+    Vector2f Direction = Vector2f(To - From);
+    float Distance = static_cast<float>(sqrt(pow(To.x - From.x, 2) + pow(To.y - From.y, 2)));
+    Direction /= Distance;
+    return Direction;
+}
+
 int main()
 {
+    srand(time(NULL));
     //Konsola dla komunikatów błędów
     AllocConsole();
     (void)freopen("CONOUT$", "w", stdout);
@@ -239,15 +261,18 @@ int main()
     RenderWindow window(VideoMode(ScreenWidth, ScreenHeight), "Prosta Gra Przygodowa");
     window.setFramerateLimit(60);
 
+    Start:
     //Tworzenie Obiektów i dodawanie do nich textur
     GameSprite Floor("Textures/Room/floor.png", Vector2f(ScreenWidth / 2, ScreenHeight / 2));
-    Player Hero("Textures/Hero/Hero.png", Vector2f(ScreenWidth / 2, ScreenHeight / 2), 32, 32, Vector2f(4.5f, 4.5f));
-    Enemy Skeleton("Textures/Enemy/Skeleton.png", Vector2f(150, 150), 32, 32, Vector2f(4.5f, 4.5f));
+    Player Hero("Textures/Hero/Hero.png", Vector2f(ScreenWidth / 2, ScreenHeight / 2));
 
-    //Wektor który przechowuje w sobie wszystkie pociski
+    //Lista która przechowuje w sobie wszystkie pociski
     list<Bullet> Bullets;
 
-    //Wektor który przechowuje ściany 
+    //Lista która przechowuje wrogów
+    list<Enemy> Enemies;
+
+    //Lista która przechowuje ściany 
     list<GameSprite> Walls;
     Walls.emplace_back("Textures/Room/left_wall.png", Vector2f(WallSize / 2, ScreenHeight / 2));
     Walls.emplace_back("Textures/Room/right_wall.png", Vector2f(ScreenWidth - WallSize / 2, ScreenHeight / 2));
@@ -257,14 +282,17 @@ int main()
     //Klasa Myszki (Narazie potrzebna tylko dla strzałow)
     Mouse _Mouse;
 
+    bool IsSpawn = false;
+    bool IsShot = false;
+
     //Pętla okna
     while (window.isOpen())
     {
         Event event;
 
         //Zegar który pomaga w poruszniu obiektów bardziej płynnie
-        _time = _Clock.getElapsedTime().asSeconds();
-        _Clock.restart();
+        GlobalTime = GlobalClock.getElapsedTime().asSeconds();
+        GlobalClock.restart();
 
         while (window.pollEvent(event))
         {
@@ -275,40 +303,93 @@ int main()
             {
                 //Warynek sprawdzajacy czy odpuszczony klawisz był lewym przyciskiem MYSZY
                 if (event.mouseButton.button == Mouse::Left)
-                {
-                    Bullets.emplace_back("Textures/Hero/Bullet.png", Hero.GetGameSprite().getPosition(), CalculateDirection(window.mapPixelToCoords(_Mouse.getPosition(window)), Hero.GetGameSprite().getPosition()), Vector2f(0.8f, 0.8f));
-                }
+                    IsShot = true;
+                if (event.mouseButton.button == Mouse::Right)
+                    IsSpawn = true;
             }
+        }
+
+        if (IsSpawn)
+        {
+            IsSpawn = false;
+            SpawnEnemy(&Enemies, "Textures/Enemy/Skeleton.png", Hero);
+        }
+        if (IsShot)
+        {
+            IsShot = false;
+            Bullets.emplace_back("Textures/Hero/Bullet.png", Hero.GetGameSprite().getPosition(), CalculateDirection(window.mapPixelToCoords(_Mouse.getPosition(window)), Hero.GetGameSprite().getPosition()));
         }
 
         //Wywołanie funkcji poruszania gracza
         Hero.Move();
-        Skeleton.Update(CalculateDirection(Hero.GetGameSprite().getPosition(), Skeleton.GetGameSprite().getPosition()));
 
         //Wyświetlanie wszystkich obiektów w oknie gry
         window.clear();
         window.draw(Floor.GetGameSprite());
-        for (auto& WallsIt : Walls)
+        for(auto& WallsIt : Walls)
         {
             window.draw(WallsIt.GetGameSprite());
         }
-        window.draw(Skeleton.GetGameSprite());
+        for(auto& EnemiesIt : Enemies)
+        {
+            EnemiesIt.Move(CalculateDirection(Hero.GetGameSprite().getPosition(), EnemiesIt.GetGameSprite().getPosition()));
+            window.draw(EnemiesIt.GetGameSprite());
+        }
         window.draw(Hero.GetGameSprite());
         for(auto BulletsIt = Bullets.begin(); BulletsIt != Bullets.end();)
         {
             BulletsIt->Update(window);
-            bool _IsDelete = false;
+            bool _IsBulletDelete = false;
+            bool _IsEnemyDelete = false;
             for (auto& WallsIt : Walls)
             {
-                if (WallsIt.GetGameSprite().getGlobalBounds().intersects(BulletsIt->GetGameSprite().getGlobalBounds()))
+                if(WallsIt.GetGameSprite().getGlobalBounds().intersects(BulletsIt->GetGameSprite().getGlobalBounds()))
                 {
                     BulletsIt = Bullets.erase(BulletsIt);
-                    _IsDelete = true;
+                    _IsBulletDelete = true;
                     break;
                 }
             }
-            if (!_IsDelete)
+            if (BulletsIt == Bullets.end()) break;
+            for(auto EnemiesIt = Enemies.begin(); EnemiesIt != Enemies.end();)
+            {
+                if (EnemiesIt->GetGameSprite().getGlobalBounds().intersects(BulletsIt->GetGameSprite().getGlobalBounds()))
+                {
+                    BulletsIt = Bullets.erase(BulletsIt);
+                    EnemiesIt = Enemies.erase(EnemiesIt);
+                    _IsBulletDelete = true;
+                    _IsEnemyDelete = true;
+                    break;
+                }
+                if (!_IsEnemyDelete)
+                    ++EnemiesIt;
+            }
+            if(!_IsBulletDelete)
                 ++BulletsIt;
+        }
+        for (auto& EnemiesIt : Enemies)
+        {
+            if (EnemiesIt.GetGameSprite().getGlobalBounds().intersects(Hero.GetGameSprite().getGlobalBounds()))
+            {
+                GameSprite GameOver("Textures/Menu/GameOver.jpg", Vector2f(ScreenWidth/2, ScreenHeight/2));
+                bool Restart = false;
+                while(!Restart)
+                {
+                    window.draw(GameOver.GetGameSprite());
+                    window.display();
+                    while (window.pollEvent(event))
+                    {
+                        if (event.type == sf::Event::KeyPressed)
+                        {
+                            if (event.key.code == sf::Keyboard::R)
+                            {
+                                Restart = true;
+                            }
+                        }
+                    }
+                }
+                goto Start;
+            }
         }
         window.display();
     }

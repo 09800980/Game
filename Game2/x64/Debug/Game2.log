@@ -1,2 +1,23 @@
 ﻿  main.cpp
+C:\Users\shvab\Documents\Game\Game2\main.cpp(42,51): warning C4244: =: преобразование "T" в "int", возможна потеря данных
+          with
+          [
+              T=float
+          ]
+C:\Users\shvab\Documents\Game\Game2\main.cpp(43,52): warning C4244: =: преобразование "T" в "int", возможна потеря данных
+          with
+          [
+              T=float
+          ]
+C:\Users\shvab\Documents\Game\Game2\main.cpp(230,64): warning C4244: аргумент: преобразование "int" в "T", возможна потеря данных
+          with
+          [
+              T=float
+          ]
+C:\Users\shvab\Documents\Game\Game2\main.cpp(230,62): warning C4244: аргумент: преобразование "int" в "T", возможна потеря данных
+          with
+          [
+              T=float
+          ]
+C:\Users\shvab\Documents\Game\Game2\main.cpp(254,15): warning C4244: аргумент: преобразование "time_t" в "unsigned int", возможна потеря данных
   Game2.vcxproj -> C:\Users\shvab\Documents\Game\Game2\x64\Debug\Game2.exe
